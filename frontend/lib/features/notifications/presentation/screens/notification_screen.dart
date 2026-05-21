@@ -1,123 +1,135 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:aarogya/core/data_manager.dart';
 
-class NotificationScreen extends StatelessWidget {
+class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
   @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  @override
   Widget build(BuildContext context) {
+    const Color hospitalNavy = Color(0xFF0F2D26);
+    const Color hospitalGreen = Color(0xFF439A86);
+    final data = DataManager();
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: const Color(0xFFFCFDFD),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text("Notifications", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: hospitalNavy),
+        title: Text(
+          "Notifications",
+          style: GoogleFonts.outfit(color: hospitalNavy, fontWeight: FontWeight.bold),
+        ),
         actions: [
-          TextButton(onPressed: () {}, child: const Text("Mark all as read", style: TextStyle(color: Color(0xFF22D3EE), fontSize: 12))),
+          if (data.unreadCount > 0)
+            TextButton(
+              onPressed: () {
+                setState(() => data.markAllRead());
+              },
+              child: Text(
+                "Mark all as read",
+                style: GoogleFonts.outfit(color: hospitalGreen, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildNotificationGroup("Today"),
-          _buildNotificationItem(
-            emoji: "🚛",
-            title: "Clinic Arriving Soon",
-            desc: "Mobile Clinic #402 is just 2 km away from your location.",
-            time: "2 mins ago",
-            isUnread: true,
-          ),
-          _buildNotificationItem(
-            emoji: "💊",
-            title: "Medicine Reminder",
-            desc: "Time to take your Morning Dose (Paracetamol 500mg).",
-            time: "1 hour ago",
-            isUnread: true,
-          ),
-          const SizedBox(height: 30),
-          _buildNotificationGroup("Yesterday"),
-          _buildNotificationItem(
-            emoji: "📅",
-            title: "Appointment Confirmed",
-            desc: "Your consultation with Dr. Sarah Wilson is confirmed for tomorrow.",
-            time: "20 hours ago",
-            isUnread: false,
-          ),
-          _buildNotificationItem(
-            emoji: "🧪",
-            title: "Lab Report Ready",
-            desc: "Your Blood Test results from 10th May are now available.",
-            time: "1 day ago",
-            isUnread: false,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationGroup(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0, left: 4),
-      child: Text(
-        title,
-        style: TextStyle(color: Colors.white.withOpacity(0.3), fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1),
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem({
-    required String emoji,
-    required String title,
-    required String desc,
-    required String time,
-    required bool isUnread,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isUnread ? const Color(0xFF22D3EE).withOpacity(0.05) : const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isUnread ? const Color(0xFF22D3EE).withOpacity(0.2) : Colors.white.withOpacity(0.05)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-            child: Text(emoji, style: const TextStyle(fontSize: 20)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: data.notifications.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(time, style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10)),
+                    const Text("🔔", style: TextStyle(fontSize: 64)),
+                    const SizedBox(height: 24),
+                    Text(
+                      "No Notifications Yet",
+                      style: GoogleFonts.outfit(color: hospitalNavy, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Appointment confirmations, clinic alerts, and medicine reminders will appear here.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(color: hospitalNavy.withOpacity(0.5), fontSize: 14, height: 1.5),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  desc,
-                  style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, height: 1.4),
-                ),
-              ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: data.notifications.length,
+              itemBuilder: (context, index) {
+                final notif = data.notifications[index];
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => data.markRead(notif.id));
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: notif.isRead ? Colors.white : hospitalGreen.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: notif.isRead ? Colors.black.withOpacity(0.05) : hospitalGreen.withOpacity(0.24),
+                        width: 1.5,
+                      ),
+                      boxShadow: notif.isRead
+                          ? [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 3))]
+                          : [],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: Colors.black.withOpacity(0.03), shape: BoxShape.circle),
+                          child: Text(notif.emoji, style: const TextStyle(fontSize: 20)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(notif.title, style: GoogleFonts.outfit(color: hospitalNavy, fontWeight: FontWeight.bold, fontSize: 14)),
+                                  ),
+                                  Text(notif.timeAgo, style: GoogleFonts.outfit(color: hospitalNavy.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                notif.description,
+                                style: GoogleFonts.outfit(color: hospitalNavy.withOpacity(0.65), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!notif.isRead)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8, top: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(color: hospitalGreen, shape: BoxShape.circle),
+                          ),
+                      ],
+                    ),
+                  ),
+                ).animate().fadeIn(delay: (index * 80).ms).slideY(begin: 0.1, end: 0);
+              },
             ),
-          ),
-          if (isUnread)
-            Container(
-              margin: const EdgeInsets.only(left: 8, top: 4),
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(color: Color(0xFF22D3EE), shape: BoxShape.circle),
-            ),
-        ],
-      ),
-    ).animate().fadeIn().slideY(begin: 0.1, end: 0);
+    );
   }
 }

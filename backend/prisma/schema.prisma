@@ -1,0 +1,162 @@
+// ──────────────────────────────────────────────
+// Aarogyam Prisma Schema Definition
+// ──────────────────────────────────────────────
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums are replaced with String for SQLite compatibility
+
+// Enums are replaced with String for SQLite compatibility
+
+// Enums are replaced with String for SQLite compatibility
+
+model User {
+  id          String   @id @default(uuid())
+  phone       String   @unique
+  name        String
+  role        String   @default("PATIENT")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient     Patient?
+  doctor      Doctor?
+}
+
+model Patient {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age            Int
+  gender         String
+  address        String
+  medicalHistory String?
+  allergies      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appointments   Appointment[]
+  prescriptions  Prescription[]
+  reports        Report[]
+}
+
+model Doctor {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization String
+  isAvailable    Boolean  @default(true)
+  clinicId       String?
+  clinic         Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appointments   Appointment[]
+}
+
+model Clinic {
+  id              String       @id @default(uuid())
+  name            String
+  vehicleNumber   String       @unique
+  latitude        Float
+  longitude       Float
+  address         String
+  currentLocation String
+  nextStop        String?
+  services        String       // Store as comma-separated string for SQLite
+  status          String       @default("ACTIVE")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  doctors         Doctor[]
+  appointments    Appointment[]
+}
+
+model Appointment {
+  id               String            @id @default(uuid())
+  clinicId         String
+  clinic           Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctorId         String
+  doctor           Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patientId        String
+  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  symptoms         String
+  doctorName       String            @default("Dr. Unknown")
+  doctorSpecialization String        @default("General")
+  clinicName       String            @default("Clinic")
+  patientName      String            @default("Patient")
+  patientPhone     String            @default("")
+  address          String            @default("")
+  consultationType String            @default("Physical consult")
+  status           String            @default("CONFIRMED")
+  scheduledAt      DateTime          @default(now())
+  createdAt        DateTime          @default(now())
+
+  prescription     Prescription?
+  diagnostics      Diagnostic[]
+}
+
+model Prescription {
+  id            String      @id @default(uuid())
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorName    String
+  diagnosis     String
+  medicines     String      // Multi-line detailed medication instructions
+  notes         String?
+  followUpDays  Int         @default(7)
+  createdAt     DateTime    @default(now())
+}
+
+model Diagnostic {
+  id            String      @id @default(uuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  testName      String      // e.g. "Blood Glucose", "SpO2"
+  result        String
+  referenceRange String?
+  createdAt     DateTime    @default(now())
+}
+
+model Medicine {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  dosage      String
+  stockCount  Int      @default(100)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  phone     String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String   // Cloudinary secure link
+  createdAt   DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  role      String
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}

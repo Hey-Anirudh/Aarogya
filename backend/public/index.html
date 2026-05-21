@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aarogyam — Master Headquarters Operations Dashboard</title>
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Firebase JS SDK (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A84FF',
+            accent: '#00C2A8',
+            background: '#F8FAFC',
+            dark: '#0F172A',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8FAFC;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-dark flex flex-col">
+
+  <!-- Security Login Gate Overlay -->
+  <div id="login-overlay" class="fixed inset-0 z-[9999] bg-[#0F172A] flex items-center justify-center p-4">
+    <div class="bg-white/5 border border-white/10 backdrop-blur-xl p-8 rounded-3xl max-w-md w-full shadow-2xl space-y-6">
+      <div class="text-center">
+        <div class="h-16 w-16 bg-gradient-to-tr from-primary to-accent rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="text-2xl font-black text-white mt-4 tracking-tight">Master Operations Control</h2>
+        <p class="text-xs text-accent uppercase tracking-wider font-bold">Administrative Security Access</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Administrative Security Key</label>
+          <input id="security-key" type="password" placeholder="••••" class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-center text-white placeholder-white/30 text-lg focus:outline-none focus:border-primary font-mono tracking-widest transition">
+        </div>
+        <div id="login-error" class="hidden text-xs text-rose-400 text-center font-semibold">
+          <i class="fa-solid fa-circle-exclamation mr-1"></i> Access Denied: Invalid Administrative Passcode.
+        </div>
+        <button onclick="verifyAccess()" class="w-full bg-primary hover:bg-primary/95 text-white font-bold py-3.5 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          Verify and Open Master Control
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 py-4 px-8 flex justify-between items-center shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white text-2xl shadow-md">
+        <i class="fa-solid fa-tower-broadcast"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-black tracking-tight text-dark flex items-center gap-2">
+          AAROGYAM
+          <span class="text-xs bg-primary/10 border border-primary/20 text-primary font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Master Ops Control</span>
+        </h1>
+        <p class="text-xs text-slate-400">Headquarters Real-time Fleet Logistics & Cloud Database Administration</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right hidden md:block">
+        <h3 class="font-bold text-sm text-slate-900">Operations Control</h3>
+        <p class="text-[10px] text-accent font-bold uppercase tracking-wider">Sync Status: Active Live</p>
+      </div>
+      <button onclick="stageLogout()" class="h-9 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition">
+        Lock Terminal
+      </button>
+    </div>
+  </header>
+
+  <!-- Control Panel Layout -->
+  <main class="max-w-[1600px] w-full mx-auto p-6 lg:p-8 space-y-6 flex-1 flex flex-col">
+
+    <!-- Seeding Command Center -->
+    <section class="bg-gradient-to-r from-dark to-slate-900 text-white rounded-3xl p-6 shadow-md border border-white/5 flex flex-col lg:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-accent text-2xl">
+          <i class="fa-solid fa-database animate-pulse"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-black tracking-tight">Database Command Panel</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-xl">Populate cloud database with initial smart clinics, specialized doctors, appointments, and diagnostic logs instantly, or reset all tables to check empty states.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 w-full lg:w-auto">
+        <button onclick="seedDatabase()" class="flex-1 lg:flex-none px-6 py-3.5 rounded-xl bg-primary hover:bg-primary/95 text-white font-bold text-xs uppercase tracking-wider shadow-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          Seed Cloud Firestore
+        </button>
+        <button onclick="clearDatabase()" class="flex-1 lg:flex-none px-6 py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-trash-can text-rose-500"></i>
+          Wipe Firestore Data
+        </button>
+      </div>
+    </section>
+
+    <!-- Analytics Dashboard Counter Row -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[120px]">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mobile Fleet Units</h4>
+        <div class="flex items-baseline justify-between mt-4">
+          <h2 class="text-3xl font-black text-dark" id="stat-vans">0</h2>
+          <span class="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded uppercase">Vans Registered</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[120px]">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Physicians</h4>
+        <div class="flex items-baseline justify-between mt-4">
+          <h2 class="text-3xl font-black text-dark" id="stat-doctors">0</h2>
+          <span class="text-[10px] bg-accent/10 text-accent font-bold px-2 py-0.5 rounded uppercase">Specialists Available</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[120px]">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Appts</h4>
+        <div class="flex items-baseline justify-between mt-4">
+          <h2 class="text-3xl font-black text-dark" id="stat-pending">0</h2>
+          <span class="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded uppercase">Waiting Consultation</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[120px]">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cleared Consultations</h4>
+        <div class="flex items-baseline justify-between mt-4">
+          <h2 class="text-3xl font-black text-dark" id="stat-completed">0</h2>
+          <span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded uppercase">Rx Prescriptions Sent</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Live Operations Workspace Grid -->
+    <section class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+      <!-- Left 7 Columns: Clinics Fleet Tracker & Physicians Registry -->
+      <div class="xl:col-span-7 space-y-6 flex flex-col">
+        
+        <!-- Clinics Fleet Table -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-black text-dark">Mobile Clinic Fleet (Real-time GPS Tracking)</h2>
+              <p class="text-xs text-slate-400 font-medium">Click "Alter Route" to coordinate clinic waypoints and stops live on patient maps.</p>
+            </div>
+            <i class="fa-solid fa-route text-primary text-xl"></i>
+          </div>
+
+          <div class="space-y-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar" id="clinics-container">
+            <div class="text-center py-12 text-slate-400">
+              <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary mb-2"></i>
+              <p class="text-xs">Connecting to Fleet GPS streams...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Physicians Registry Table -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-black text-dark">Clinician Specialists Directory</h2>
+              <p class="text-xs text-slate-400 font-medium">Verify available specialized doctors on-board the mobile fleet.</p>
+            </div>
+            <i class="fa-solid fa-user-doctor text-accent text-xl"></i>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar" id="doctors-container">
+            <div class="col-span-full text-center py-12 text-slate-400">
+              <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary mb-2"></i>
+              <p class="text-xs">Loading specialized doctors...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right 5 Columns: Appointments Queue & E-Prescriptions Log -->
+      <div class="xl:col-span-5 space-y-6 flex flex-col">
+
+        <!-- Live Appointments Queue -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-black text-dark">Consultations Waiting Queue</h2>
+              <p class="text-xs text-slate-400 font-medium">Live bookings dispatched from Patient Flutter applications.</p>
+            </div>
+            <i class="fa-solid fa-users-rectangle text-amber-500 text-xl"></i>
+          </div>
+
+          <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar" id="appointments-container">
+            <div class="text-center py-12 text-slate-400">
+              <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary mb-2"></i>
+              <p class="text-xs">Loading live consultation tickets...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Digital Prescriptions Issued -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-black text-dark">Digital E-Prescriptions Archive</h2>
+              <p class="text-xs text-slate-400 font-medium">Reports deployed by doctors back to patients.</p>
+            </div>
+            <i class="fa-solid fa-receipt text-purple-600 text-xl"></i>
+          </div>
+
+          <div class="space-y-3 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar" id="reports-container">
+            <div class="text-center py-12 text-slate-400">
+              <i class="fa-solid fa-circle-notch fa-spin text-xl text-primary mb-2"></i>
+              <p class="text-xs">Syncing generated reports...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Route Alteration Modal -->
+  <div id="route-modal" class="fixed inset-0 z-50 bg-dark/80 backdrop-blur-sm flex items-center justify-center hidden p-4 text-dark">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6">
+      <div>
+        <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-route text-primary"></i>
+          Alter Van Waypoint stops
+        </h3>
+        <p class="text-xs text-slate-400 mt-1">Update coordinates and scheduled target stops for clinic van.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Current Location</label>
+          <input type="text" id="modal-loc" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-xs focus:outline-none focus:border-primary transition">
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Next Scheduled Destination</label>
+          <input type="text" id="modal-stop" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-xs focus:outline-none focus:border-primary transition">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeRouteModal()" class="px-5 py-3 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50 transition">Cancel</button>
+        <button onclick="deployRouteChanges()" class="px-5 py-3 rounded-xl bg-primary hover:bg-primary/95 text-white font-bold text-xs uppercase tracking-wider shadow transition">
+          Deploy Waypoint changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    const firebaseConfig = {
+      apiKey: 'AIzaSyCFP7BMXEFPLpkFUReijuGVthbkca2Mz-o',
+      appId: '1:655040482753:web:9eda4857368b8687c33340',
+      messagingSenderId: '655040482753',
+      projectId: 'aarogyam-fa6b9',
+      authDomain: 'aarogyam-fa6b9.firebaseapp.com',
+      storageBucket: 'aarogyam-fa6b9.firebasestorage.app',
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let clinics = [];
+    let doctors = [];
+    let appointments = [];
+    let reports = [];
+    let activeModalClinic = null;
+
+    // Listen to Clinics
+    db.collection('clinics').onSnapshot((snapshot) => {
+      clinics = [];
+      snapshot.forEach((doc) => {
+        clinics.push({ id: doc.id, ...doc.data() });
+      });
+      document.getElementById('stat-vans').innerText = clinics.length;
+      renderClinics();
+    });
+
+    // Listen to Doctors
+    db.collection('doctors').onSnapshot((snapshot) => {
+      doctors = [];
+      snapshot.forEach((doc) => {
+        doctors.push({ id: doc.id, ...doc.data() });
+      });
+      document.getElementById('stat-doctors').innerText = doctors.length;
+      renderDoctors();
+    });
+
+    // Listen to Appointments
+    db.collection('appointments').onSnapshot((snapshot) => {
+      appointments = [];
+      let pending = 0;
+      let completed = 0;
+      snapshot.forEach((doc) => {
+        const appt = { id: doc.id, ...doc.data() };
+        appointments.push(appt);
+        if (appt.status === "CONFIRMED") pending++;
+        if (appt.status === "COMPLETED") completed++;
+      });
+      appointments.sort((a, b) => (a.scheduledAt?.toDate() || 0) - (b.scheduledAt?.toDate() || 0));
+      document.getElementById('stat-pending').innerText = pending;
+      document.getElementById('stat-completed').innerText = completed;
+      renderAppointments();
+    });
+
+    // Listen to Reports
+    db.collection('reports').onSnapshot((snapshot) => {
+      reports = [];
+      snapshot.forEach((doc) => {
+        reports.push({ id: doc.id, ...doc.data() });
+      });
+      reports.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+      renderReports();
+    });
+
+    // Render Clinics List
+    function renderClinics() {
+      const container = document.getElementById('clinics-container');
+      if (clinics.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">No active mobile clinics in database. Click Seed below.</div>`;
+        return;
+      }
+
+      container.innerHTML = clinics.map((c) => {
+        let badge = c.status === 'ACTIVE' 
+          ? '<span class="text-[9px] bg-accent/15 text-accent font-bold px-2 py-0.5 rounded uppercase">Active</span>'
+          : '<span class="text-[9px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded uppercase">In Transit</span>';
+
+        return `
+          <div class="p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-sm transition flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 bg-primary/10 border border-primary/20 text-primary rounded-xl flex items-center justify-center text-lg">
+                <i class="fa-solid fa-truck-medical"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-xs text-slate-900">${c.name}</h4>
+                  ${badge}
+                </div>
+                <p class="text-[10px] text-slate-400 mt-0.5">Plate: ${c.vehicleNumber} | ${c.services.join(', ')}</p>
+                <div class="text-[10px] text-slate-600 mt-2">
+                  <span class="mr-2"><strong>Stop:</strong> ${c.address}</span>
+                  <span><strong>Next:</strong> <strong class="text-primary">${c.nextStop}</strong></span>
+                </div>
+              </div>
+            </div>
+            <button onclick="openRouteModal('${c.id}')" class="h-8 px-3 bg-primary hover:bg-primary/95 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-sm transition">
+              Alter Route
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Doctors List
+    function renderDoctors() {
+      const container = document.getElementById('doctors-container');
+      if (doctors.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs col-span-full">No active physicians in database.</div>`;
+        return;
+      }
+
+      container.innerHTML = doctors.map((d) => {
+        return `
+          <div class="p-4 rounded-2xl border border-slate-100 bg-white flex items-center gap-3">
+            <div class="h-10 w-10 bg-accent/15 border border-accent/20 text-accent rounded-xl flex items-center justify-center text-lg">
+              <i class="fa-solid fa-user-md"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-xs text-slate-900">${d.name}</h4>
+              <p class="text-[10px] text-slate-400 mt-0.5">${d.specialization}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[9px] font-bold ${d.isAvailable ? 'text-accent' : 'text-slate-400'}">● ${d.isAvailable ? 'Available' : 'Offline'}</span>
+                <span class="text-[9px] text-slate-500">| Exp: ${d.experienceYears} Yrs</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Appointments Waiting List
+    function renderAppointments() {
+      const container = document.getElementById('appointments-container');
+      if (appointments.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">No active consultations booked yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = appointments.map((a) => {
+        let stateBadge = a.status === 'CONFIRMED'
+          ? '<span class="text-[9px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded">Waiting</span>'
+          : '<span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">Cleared</span>';
+
+        return `
+          <div class="p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-sm transition">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <h4 class="font-bold text-xs text-slate-900">${a.patientName}</h4>
+                ${stateBadge}
+              </div>
+              <span class="text-[9px] text-primary font-bold uppercase">${a.consultationType}</span>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed"><strong>Symptoms:</strong> ${a.symptoms}</p>
+            <div class="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-100">
+              <span class="text-[9px] text-slate-400"><i class="fa-solid fa-hospital mr-1"></i> ${a.clinicName}</span>
+              <span class="text-[9px] text-slate-600 font-medium">Dr. ${a.doctorName}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Reports / Prescriptions
+    function renderReports() {
+      const container = document.getElementById('reports-container');
+      if (reports.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">No e-prescriptions issued yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = reports.map((r) => {
+        return `
+          <div class="p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-sm transition">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="font-bold text-xs text-slate-900"><i class="fa-solid fa-file-prescription text-purple-600 mr-1.5"></i> Rx issued by ${r.doctorName}</h4>
+              <span class="text-[9px] text-slate-400 font-mono">${r.patientPhone || 'Direct'}</span>
+            </div>
+            <p class="text-[10px] text-slate-700"><strong>Diagnosis:</strong> ${r.diagnosis}</p>
+            <div class="bg-slate-50 rounded-xl p-2.5 mt-2.5 text-[9px] font-mono text-slate-600 border border-slate-100">
+              ${r.medicines.replace(/\n/g, '<br>')}
+            </div>
+            <p class="text-[9px] text-slate-400 mt-2.5 italic">"Advice: ${r.notes}"</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Seeding cloud Firestore
+    function seedDatabase() {
+      if (!confirm("Seed initial mobile clinics and doctor schedules?")) return;
+
+      db.collection('clinics').add({
+        name: 'Primary Care Unit A',
+        vehicleNumber: 'DL-01-A-1234',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        address: 'Noida Sector 62 Main Crossing, UP',
+        currentLocation: 'Noida Sector 62 Main Crossing, UP',
+        services: ['General Checkup', 'Pediatrics'],
+        status: 'ACTIVE',
+        nextStop: 'Main Crossing',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then((docRef) => {
+        db.collection('doctors').add({
+          name: 'Aarav Sharma',
+          specialization: 'General Physician',
+          clinicId: docRef.id,
+          isAvailable: true,
+          experienceYears: 12,
+          phone: '+919999999991'
+        });
+        db.collection('doctors').add({
+          name: 'Priya Patel',
+          specialization: 'Paediatrician',
+          clinicId: docRef.id,
+          isAvailable: true,
+          experienceYears: 8,
+          phone: '+919999999992'
+        });
+      });
+
+      db.collection('clinics').add({
+        name: 'Maternal & Child Health Express',
+        vehicleNumber: 'DL-02-B-5678',
+        latitude: 28.5800,
+        longitude: 77.3100,
+        address: 'Sector 15 Community Center, Noida',
+        currentLocation: 'Sector 15 Community Center, Noida',
+        services: ['Gynaecology', 'Pediatrics'],
+        status: 'IN_TRANSIT',
+        nextStop: 'Community Center',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then((docRef) => {
+        db.collection('doctors').add({
+          name: 'Ananya Rao',
+          specialization: 'Gynaecologist',
+          clinicId: docRef.id,
+          isAvailable: true,
+          experienceYears: 14,
+          phone: '+919999999993'
+        });
+      });
+
+      alert("⚡ Real-time database seeded successfully!");
+    }
+
+    // Wipe all data in cloud Firestore
+    function clearDatabase() {
+      if (!confirm("⚠️ WARNING: This will wipe all clinics, doctors, appointments, and prescriptions! Proceed?")) return;
+
+      db.collection('clinics').get().then(snap => snap.forEach(d => d.ref.delete()));
+      db.collection('doctors').get().then(snap => snap.forEach(d => d.ref.delete()));
+      db.collection('appointments').get().then(snap => snap.forEach(d => d.ref.delete()));
+      db.collection('reports').get().then(snap => snap.forEach(d => d.ref.delete()));
+
+      alert("🧹 All database tables successfully wiped!");
+    }
+
+    // Route Alteration modal functions
+    function openRouteModal(id) {
+      activeModalClinic = clinics.find(c => c.id === id);
+      if (!activeModalClinic) return;
+
+      document.getElementById('modal-loc').value = activeModalClinic.address || '';
+      document.getElementById('modal-stop').value = activeModalClinic.nextStop || '';
+      document.getElementById('route-modal').classList.remove('hidden');
+    }
+
+    function closeRouteModal() {
+      document.getElementById('route-modal').classList.add('hidden');
+      activeModalClinic = null;
+    }
+
+    function deployRouteChanges() {
+      if (!activeModalClinic) return;
+
+      const loc = document.getElementById('modal-loc').value.trim();
+      const stop = document.getElementById('modal-stop').value.trim();
+
+      if (!loc || !stop) {
+        alert("Please complete both coordinates fields.");
+        return;
+      }
+
+      const newLat = (activeModalClinic.latitude || 28.6139) + 0.0015;
+      const newLng = (activeModalClinic.longitude || 77.2090) - 0.0012;
+
+      db.collection('clinics').doc(activeModalClinic.id).update({
+        address: loc,
+        currentLocation: loc,
+        nextStop: stop,
+        latitude: newLat,
+        longitude: newLng
+      })
+      .then(() => {
+        alert("✅ Fleet route waypoint successfully synchronized!");
+        closeRouteModal();
+      })
+      .catch(err => alert(err.message));
+    }
+
+    // Verify Passcode
+    function verifyAccess() {
+      const key = document.getElementById('security-key').value.trim();
+      if (key === "9999") {
+        document.getElementById('login-overlay').classList.add('hidden');
+        localStorage.setItem('master_authorized', 'true');
+      } else {
+        document.getElementById('login-error').classList.remove('hidden');
+      }
+    }
+
+    function stageLogout() {
+      localStorage.clear();
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
+
+    if (localStorage.getItem('master_authorized') === 'true') {
+      document.getElementById('login-overlay').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
